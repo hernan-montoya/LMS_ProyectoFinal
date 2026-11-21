@@ -1,0 +1,11 @@
+{
+  "name": "lms-competencias-backend",
+  "version": "1.0.0",
+  "private": true,
+  "description": "API REST del LMS de Gestión de Competencias y Capacitación",
+  "type": "module",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "nodemon src/server.js"
+  }
+}
