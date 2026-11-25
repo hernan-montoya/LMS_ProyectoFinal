@@ -12,13 +12,17 @@ router.get('/areas/:workAreaId/competencies', async (req, res, next) => {
     }
 
     const [rows] = await pool.execute(
-      `SELECT employee_id, employee_code, full_name, job_title,
-              department_id, department_name, work_area_id, area_name,
-              competency_id, competency_code, competency_name,
-              assessment_id, iluo_level, evaluation_date, evaluator_name, observations
-       FROM vw_employee_competency_matrix
-       WHERE work_area_id = ?
-       ORDER BY full_name, competency_id`,
+      `SELECT m.employee_id, m.employee_code, m.full_name, m.job_title,
+          m.department_id, m.department_name, m.work_area_id, m.area_name,
+          m.competency_id, m.competency_code, m.competency_name,
+          m.assessment_id, m.iluo_level, m.evaluation_date,
+          m.evaluator_name, m.observations
+   FROM vw_employee_competency_matrix m
+   INNER JOIN employees e
+      ON e.employee_id = m.employee_id
+   WHERE m.work_area_id = ?
+     AND e.employment_status = 'Activo'
+   ORDER BY m.full_name, m.competency_id`,
       [workAreaId]
     );
 

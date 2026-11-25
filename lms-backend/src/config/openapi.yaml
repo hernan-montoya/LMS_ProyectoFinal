@@ -1,0 +1,883 @@
+openapi: 3.0.3
+info:
+  title: LMS - API de Gestión de Competencias y Capacitación
+  version: 1.0.0
+  description: Documentación interactiva de los endpoints del backend LMS desarrollado con Node.js, Express y MySQL.
+    La API permite comprobar la conexión, administrar colaboradores, consultar departamentos y áreas, consultar
+    la matriz ILUO, actualizar evaluaciones y obtener indicadores y brechas de capacitación.
+servers:
+- url: http://localhost:3000
+  description: Servidor local de desarrollo
+tags:
+- name: Colaboradores
+  description: Alta, consulta, actualización y baja lógica de colaboradores.
+- name: Departamentos
+  description: Consulta de departamentos y sus áreas de trabajo.
+- name: Matriz ILUO
+  description: Consulta de competencias por área y actualización de evaluaciones.
+- name: Sistema
+  description: Comprobación de disponibilidad de la API y conexión a MySQL.
+- name: Dashboard
+  description: Indicadores globales, por departamento y por área.
+- name: Brechas de capacitación
+  description: Resumen de brechas por departamento, área y competencia.
+paths:
+  /api/employees:
+    get:
+      tags:
+      - Colaboradores
+      summary: Listar y filtrar colaboradores
+      description: Devuelve colaboradores con sus datos de departamento y área. El parámetro status acepta Activo,
+        Inactivo o Todos. En la implementación del backend compartida, el valor predeterminado es Activo; el directorio
+        general debe solicitar status=Todos para mostrar ambos estados.
+      parameters:
+      - name: q
+        in: query
+        description: Búsqueda por código, nombre o puesto.
+        schema:
+          type: string
+      - name: department_id
+        in: query
+        description: Filtrar por identificador de departamento.
+        schema:
+          type: integer
+      - name: work_area_id
+        in: query
+        description: Filtrar por identificador de área de trabajo.
+        schema:
+          type: integer
+      - name: status
+        in: query
+        description: Estado laboral que se desea consultar.
+        schema:
+          type: string
+          enum:
+          - Activo
+          - Inactivo
+          - Todos
+          default: Activo
+      responses:
+        '200':
+          description: Listado obtenido correctamente.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - success
+                - total
+                - data
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  total:
+                    type: integer
+                    example: 51
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Employee'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    post:
+      tags:
+      - Colaboradores
+      summary: Registrar un colaborador
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmployeeCreate'
+      responses:
+        '201':
+          description: Colaborador creado correctamente.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Colaborador creado correctamente.
+                  data:
+                    $ref: '#/components/schemas/Employee'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          description: El código de empleado ya existe.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          $ref: '#/components/responses/ServerError'
+  /api/employees/{id}:
+    parameters:
+    - name: id
+      in: path
+      required: true
+      description: Identificador interno del colaborador.
+      schema:
+        type: integer
+        minimum: 1
+    get:
+      tags:
+      - Colaboradores
+      summary: Consultar un colaborador por ID
+      responses:
+        '200':
+          description: Colaborador encontrado.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/Employee'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    put:
+      tags:
+      - Colaboradores
+      summary: Actualizar los datos de un colaborador
+      description: Permite enviar uno o varios de los campos admitidos para su actualización.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmployeeUpdate'
+      responses:
+        '200':
+          description: Colaborador actualizado correctamente.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Colaborador actualizado correctamente.
+                  data:
+                    $ref: '#/components/schemas/Employee'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: El código de empleado ya existe.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    delete:
+      tags:
+      - Colaboradores
+      summary: Dar de baja a un colaborador (baja lógica)
+      description: Cambia employment_status a Inactivo. No elimina físicamente el registro, por lo que se conserva
+        la información del colaborador y sus relaciones.
+      responses:
+        '200':
+          description: Colaborador marcado como inactivo.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Colaborador marcado como inactivo. Su historial se conserva.
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+  /api/departments:
+    get:
+      tags:
+      - Departamentos
+      summary: Listar departamentos
+      description: Devuelve los departamentos activos del catálogo y el número de colaboradores activos asociados
+        a cada uno.
+      responses:
+        '200':
+          description: Departamentos obtenidos correctamente.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  total:
+                    type: integer
+                    example: 7
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Department'
+        '500':
+          $ref: '#/components/responses/ServerError'
+  /api/departments/{departmentId}/areas:
+    get:
+      tags:
+      - Departamentos
+      summary: Listar áreas de un departamento
+      description: Devuelve las áreas activas y el número de colaboradores activos en cada área.
+      parameters:
+      - name: departmentId
+        in: path
+        required: true
+        schema:
+          type: integer
+          minimum: 1
+      responses:
+        '200':
+          description: Áreas obtenidas correctamente.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  total:
+                    type: integer
+                    example: 3
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/WorkArea'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/ServerError'
+  /api/areas/{workAreaId}/competencies:
+    get:
+      tags:
+      - Matriz ILUO
+      summary: Consultar matriz ILUO de un área
+      description: Devuelve las competencias del área, organizadas por colaborador y evaluación. En la vista funcional
+        de la matriz se consideran únicamente colaboradores activos.
+      parameters:
+      - name: workAreaId
+        in: path
+        required: true
+        schema:
+          type: integer
+          minimum: 1
+      responses:
+        '200':
+          description: Registros de la matriz obtenidos correctamente.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  work_area_id:
+                    type: integer
+                    example: 8
+                  total:
+                    type: integer
+                    example: 35
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/MatrixRecord'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+  /api/assessments/{assessmentId}:
+    put:
+      tags:
+      - Matriz ILUO
+      summary: Actualizar una evaluación ILUO
+      description: Actualiza el nivel, fecha de evaluación y datos del evaluador.
+      parameters:
+      - name: assessmentId
+        in: path
+        required: true
+        schema:
+          type: integer
+          minimum: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AssessmentUpdate'
+      responses:
+        '200':
+          description: Evaluación actualizada correctamente.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Evaluación ILUO actualizada correctamente.
+                  data:
+                    $ref: '#/components/schemas/Assessment'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+  /api/health:
+    get:
+      tags:
+      - Sistema
+      summary: Comprobar estado de la API y conexión con MySQL
+      description: Ejecuta una comprobación de conexión a la base de datos y devuelve el resultado.
+      responses:
+        '200':
+          description: La API está disponible y MySQL respondió correctamente.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: API del LMS funcionando y conexión con MySQL establecida.
+                  database:
+                    $ref: '#/components/schemas/DatabaseStatus'
+        '500':
+          $ref: '#/components/responses/ServerError'
+  /api/dashboard/summary:
+    get:
+      tags:
+      - Dashboard
+      summary: Obtener indicadores generales del LMS
+      description: Devuelve el resumen global de colaboradores y evaluaciones ILUO, además de indicadores agregados
+        por departamento y área. Los cálculos del resumen consideran colaboradores activos.
+      responses:
+        '200':
+          description: Indicadores del dashboard obtenidos correctamente.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - success
+                - data
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      global:
+                        $ref: '#/components/schemas/GlobalDashboardSummary'
+                      departments:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/DepartmentDashboardSummary'
+                      areas:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/AreaDashboardSummary'
+        '500':
+          $ref: '#/components/responses/ServerError'
+  /api/dashboard/gaps:
+    get:
+      tags:
+      - Brechas de capacitación
+      summary: Consultar brechas por departamento, área y competencia
+      description: Devuelve los conteos por nivel ILUO y el porcentaje de brecha agrupado por departamento, área
+        y competencia. La respuesta incluye el número de evaluaciones para dar contexto a cada porcentaje.
+      responses:
+        '200':
+          description: Análisis de brechas obtenido correctamente.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - success
+                - total
+                - data
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  total:
+                    type: integer
+                    example: 65
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/CompetencyGap'
+        '500':
+          $ref: '#/components/responses/ServerError'
+components:
+  schemas:
+    Employee:
+      type: object
+      properties:
+        employee_id:
+          type: integer
+          example: 52
+        employee_code:
+          type: string
+          example: EMP052
+        full_name:
+          type: string
+          example: Andrea López Hernández
+        department_id:
+          type: integer
+          example: 1
+        department_name:
+          type: string
+          example: Recursos Humanos
+        work_area_id:
+          type: integer
+          example: 1
+        area_name:
+          type: string
+          example: Recursos Humanos - General
+        job_title:
+          type: string
+          example: Analista de Capacitación
+        hire_date:
+          type: string
+          format: date
+          example: '2024-03-15'
+        employment_status:
+          type: string
+          enum:
+          - Activo
+          - Inactivo
+          example: Activo
+    EmployeeCreate:
+      type: object
+      required:
+      - employee_code
+      - full_name
+      - department_id
+      - work_area_id
+      - job_title
+      - hire_date
+      properties:
+        employee_code:
+          type: string
+          example: EMP052
+        full_name:
+          type: string
+          example: Andrea López Hernández
+        department_id:
+          type: integer
+          example: 1
+        work_area_id:
+          type: integer
+          example: 1
+        job_title:
+          type: string
+          example: Analista de Capacitación
+        hire_date:
+          type: string
+          format: date
+          example: '2024-03-15'
+        employment_status:
+          type: string
+          enum:
+          - Activo
+          - Inactivo
+          default: Activo
+    EmployeeUpdate:
+      type: object
+      minProperties: 1
+      properties:
+        employee_code:
+          type: string
+          example: EMP052
+        full_name:
+          type: string
+          example: Andrea López Hernández
+        department_id:
+          type: integer
+          example: 1
+        work_area_id:
+          type: integer
+          example: 1
+        job_title:
+          type: string
+          example: Analista de Capacitación
+        hire_date:
+          type: string
+          format: date
+          example: '2024-03-15'
+        employment_status:
+          type: string
+          enum:
+          - Activo
+          - Inactivo
+    Department:
+      type: object
+      properties:
+        department_id:
+          type: integer
+          example: 1
+        department_code:
+          type: string
+          example: RH
+        department_name:
+          type: string
+          example: Recursos Humanos
+        description:
+          type: string
+          nullable: true
+        employee_count:
+          type: integer
+          example: 4
+          description: Conteo de colaboradores activos.
+    WorkArea:
+      type: object
+      properties:
+        work_area_id:
+          type: integer
+          example: 1
+        area_code:
+          type: string
+          example: RH-GEN
+        area_name:
+          type: string
+          example: Recursos Humanos - General
+        description:
+          type: string
+          nullable: true
+        is_management_area:
+          type: integer
+          enum:
+          - 0
+          - 1
+          example: 0
+        employee_count:
+          type: integer
+          example: 4
+          description: Conteo de colaboradores activos.
+    MatrixRecord:
+      type: object
+      properties:
+        employee_id:
+          type: integer
+          example: 3
+        employee_code:
+          type: string
+          example: EMP003
+        full_name:
+          type: string
+          example: Fernanda Castillo Gómez
+        job_title:
+          type: string
+          example: Analista de Capacitación y Desarrollo
+        department_id:
+          type: integer
+          example: 1
+        department_name:
+          type: string
+          example: Recursos Humanos
+        work_area_id:
+          type: integer
+          example: 1
+        area_name:
+          type: string
+          example: Recursos Humanos - General
+        competency_id:
+          type: integer
+          example: 4
+        competency_code:
+          type: string
+          example: RH_CAPACITACION
+        competency_name:
+          type: string
+          example: Administración de capacitación
+        assessment_id:
+          type: integer
+          format: int64
+          nullable: true
+          example: 12
+        iluo_level:
+          type: string
+          nullable: true
+          enum:
+          - I
+          - L
+          - U
+          - O
+        evaluation_date:
+          type: string
+          format: date
+          nullable: true
+        evaluator_name:
+          type: string
+          nullable: true
+        observations:
+          type: string
+          nullable: true
+    AssessmentUpdate:
+      type: object
+      required:
+      - iluo_level
+      properties:
+        iluo_level:
+          type: string
+          enum:
+          - I
+          - L
+          - U
+          - O
+          example: U
+        evaluator_name:
+          type: string
+          nullable: true
+          example: Nombre del evaluador
+        observations:
+          type: string
+          nullable: true
+          example: Evaluación de seguimiento.
+    Assessment:
+      type: object
+      properties:
+        assessment_id:
+          type: integer
+          format: int64
+          example: 12
+        employee_id:
+          type: integer
+          example: 3
+        competency_id:
+          type: integer
+          example: 4
+        iluo_level:
+          type: string
+          enum:
+          - I
+          - L
+          - U
+          - O
+          example: U
+        evaluation_date:
+          type: string
+          format: date
+          example: '2026-11-25'
+        evaluator_name:
+          type: string
+          nullable: true
+        observations:
+          type: string
+          nullable: true
+    Error:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        message:
+          type: string
+          example: La solicitud contiene datos no válidos.
+    DatabaseStatus:
+      type: object
+      description: Datos informativos devueltos por la comprobación de conexión a MySQL.
+      properties:
+        databaseName:
+          type: string
+          example: lms_competencias
+        mysqlVersion:
+          type: string
+          example: 8.0.40
+    GlobalDashboardSummary:
+      type: object
+      properties:
+        total_employees:
+          type: integer
+          example: 51
+        total_assessments:
+          type: integer
+          example: 255
+        level_i_count:
+          type: integer
+          example: 65
+        level_l_count:
+          type: integer
+          example: 49
+        level_u_count:
+          type: integer
+          example: 67
+        level_o_count:
+          type: integer
+          example: 74
+        proficiency_percent:
+          type: number
+          format: float
+          nullable: true
+          example: 55.3
+    DepartmentDashboardSummary:
+      allOf:
+      - $ref: '#/components/schemas/Department'
+      - type: object
+        properties:
+          total_assessments:
+            type: integer
+            example: 20
+          level_i_count:
+            type: integer
+            example: 5
+          level_l_count:
+            type: integer
+            example: 4
+          level_u_count:
+            type: integer
+            example: 6
+          level_o_count:
+            type: integer
+            example: 5
+          proficiency_percent:
+            type: number
+            format: float
+            nullable: true
+            example: 55.0
+    AreaDashboardSummary:
+      type: object
+      properties:
+        department_id:
+          type: integer
+          example: 6
+        department_name:
+          type: string
+          example: Producción
+        work_area_id:
+          type: integer
+          example: 8
+        area_name:
+          type: string
+          example: Corte y preparación de materiales
+        employee_count:
+          type: integer
+          example: 7
+        total_assessments:
+          type: integer
+          example: 35
+        level_i_count:
+          type: integer
+          example: 9
+        level_l_count:
+          type: integer
+          example: 8
+        level_u_count:
+          type: integer
+          example: 10
+        level_o_count:
+          type: integer
+          example: 8
+        proficiency_percent:
+          type: number
+          format: float
+          nullable: true
+          example: 51.4
+    CompetencyGap:
+      type: object
+      properties:
+        department_id:
+          type: integer
+          example: 6
+        department_name:
+          type: string
+          example: Producción
+        work_area_id:
+          type: integer
+          example: 10
+        area_name:
+          type: string
+          example: Ensamble y acabado
+        competency_id:
+          type: integer
+          example: 52
+        competency_code:
+          type: string
+          example: PM_CALIDAD
+        competency_name:
+          type: string
+          example: Control de calidad
+        total_assessments:
+          type: integer
+          example: 7
+          description: Tamaño de muestra de evaluaciones de la competencia.
+        level_i_count:
+          type: integer
+          example: 2
+        level_l_count:
+          type: integer
+          example: 4
+        level_u_count:
+          type: integer
+          example: 1
+        level_o_count:
+          type: integer
+          example: 0
+        gap_count:
+          type: integer
+          example: 6
+          description: Evaluaciones en niveles I o L.
+        gap_percentage:
+          type: number
+          format: float
+          example: 85.7
+          description: Porcentaje de evaluaciones en niveles I o L.
+  responses:
+    BadRequest:
+      description: Solicitud incorrecta o parámetros no válidos.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    NotFound:
+      description: Recurso no encontrado.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    ServerError:
+      description: Error interno del servidor.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'

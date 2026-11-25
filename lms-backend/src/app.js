@@ -3,6 +3,7 @@ import cors from 'cors';
 import apiRoutes from './routes/index.js';
 import { notFoundHandler } from './middleware/not-found.js';
 import { errorHandler } from './middleware/error-handler.js';
+import { registerSwagger } from './config/swagger.js';
 
 const app = express();
 
@@ -20,7 +21,13 @@ app.get('/', (req, res) => {
   });
 });
 
+// Documentación interactiva Swagger
+registerSwagger(app);
+
+// Rutas principales de la API
 app.use('/api', apiRoutes);
+
+// Manejo de rutas y errores
 app.use(notFoundHandler);
 app.use(errorHandler);
 

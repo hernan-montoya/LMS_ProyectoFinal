@@ -1,8 +1,14 @@
 import { useState, useEffect } from 'react';
 import CompetencyMatrix from './components/CompetencyMatrix';
+import GlobalDashboard from './components/GlobalDashboard';
+import GapAnalysis from './components/GapAnalysis';
+import EmployeeManagement from './components/EmployeeManagement';
+import MatrixExplorer from './components/MatrixExplorer';
+import WeatherWidget from './components/WeatherWidget';
 
 import {
   Activity,
+  AlertTriangle,
   BookOpen,
   Building2,
   CalendarDays,
@@ -47,6 +53,7 @@ const navigation = [
   { name: 'Dashboard', icon: LayoutDashboard },
   { name: 'Departamentos', icon: Building2 },
   { name: 'Matriz ILUO', icon: Layers3 },
+  { name: 'Brechas de capacitación', icon: AlertTriangle },
   { name: 'Colaboradores', icon: Users },
   { name: 'Capacitación', icon: GraduationCap },
   { name: 'Reportes', icon: FileBarChart },
@@ -316,14 +323,7 @@ function App() {
 
           <div className="header-right">
 
-            <div className="weather-widget">
-              <CloudSun size={23} />
-
-              <div>
-                <strong>Clima</strong>
-                <span>API pendiente de integración</span>
-              </div>
-            </div>
+            <WeatherWidget />
 
             <div className="date-widget">
               <CalendarDays size={19} />
@@ -347,205 +347,29 @@ function App() {
           </div>
         )}
 
-
-        {/* DASHBOARD */}
+        {/* DASHBOARD EJECUTIVO DINÁMICO */}
 
         {activeSection === 'Dashboard' && (
 
-          <>
+          <GlobalDashboard
+            onSelectDepartment={selectDepartment}
+          />
 
-            <section className="welcome-section">
+        )}
 
-              <div>
-                <span className="welcome-tag">
-                  <Activity size={14} />
-                  CENTRO DE CONTROL
-                </span>
+        {/* EXPLORADOR DE MATRICES ILUO */}
 
-                <h2>¡Bienvenido al LMS!</h2>
+        {activeSection === 'Matriz ILUO' && (
 
-                <p>
-                  Administra las competencias, desarrolla el talento
-                  y monitorea el desempeño de tu organización.
-                </p>
-              </div>
+          <MatrixExplorer />
 
-              <div className="welcome-illustration">
-                <GraduationCap size={78} strokeWidth={1.2} />
-              </div>
+        )}
 
-            </section>
+        {/* ANÁLISIS DE BRECHAS */}
 
+        {activeSection === 'Brechas de capacitación' && (
 
-            {/* INDICADORES */}
-
-            <section className="kpi-grid">
-
-              <div className="kpi-card">
-                <div className="kpi-icon purple-bg">
-                  <Users size={23} />
-                </div>
-
-                <span>Colaboradores</span>
-                <h2>51</h2>
-                <small>Plantilla organizacional</small>
-              </div>
-
-              <div className="kpi-card">
-                <div className="kpi-icon blue-bg">
-                  <Building2 size={23} />
-                </div>
-
-                <span>Departamentos</span>
-                <h2>7</h2>
-                <small>Estructura organizacional</small>
-              </div>
-
-              <div className="kpi-card">
-                <div className="kpi-icon orange-bg">
-                  <Layers3 size={23} />
-                </div>
-
-                <span>Competencias</span>
-                <h2>65</h2>
-                <small>Catálogo de competencias</small>
-              </div>
-
-              <div className="kpi-card">
-                <div className="kpi-icon green-bg">
-                  <ClipboardCheck size={23} />
-                </div>
-
-                <span>Evaluaciones ILUO</span>
-                <h2>255</h2>
-                <small>Evaluaciones iniciales</small>
-              </div>
-
-            </section>
-
-
-            {/* DEPARTAMENTOS */}
-
-            <section className="departments-section">
-
-              <div className="section-heading">
-
-                <div>
-                  <h2>Estructura organizacional</h2>
-
-                  <p>
-                    Selecciona un departamento para consultar
-                    sus áreas y matrices de competencias.
-                  </p>
-                </div>
-
-                <span className="total-badge">
-                  {departments.length} departamentos
-                </span>
-
-              </div>
-
-
-              <div className="department-grid">
-
-                {departments.map((department) => {
-
-                  const Icon = department.icon;
-
-                  return (
-
-                    <button
-                      key={department.id}
-                      className="department-card"
-                      onClick={() => selectDepartment(department)}
-                    >
-
-                      <div className={`department-icon ${department.color}`}>
-                        <Icon size={23} />
-                      </div>
-
-                      <div className="department-info">
-
-                        <h3>{department.name}</h3>
-
-                        <span>
-                          {department.employees} colaboradores
-                        </span>
-
-                      </div>
-
-                      <ChevronRight
-                        className="department-arrow"
-                        size={20}
-                      />
-
-                    </button>
-
-                  );
-
-                })}
-
-              </div>
-
-            </section>
-
-
-            {/* NIVELES ILUO */}
-
-            <section className="iluo-section">
-
-              <div className="section-heading">
-
-                <div>
-                  <h2>Metodología ILUO</h2>
-
-                  <p>
-                    Modelo de evaluación y desarrollo de competencias.
-                  </p>
-                </div>
-
-              </div>
-
-
-              <div className="iluo-grid">
-
-                <div className="iluo-card level-i">
-                  <span>I</span>
-                  <div>
-                    <h3>Inicial</h3>
-                    <p>En proceso de aprendizaje.</p>
-                  </div>
-                </div>
-
-                <div className="iluo-card level-l">
-                  <span>L</span>
-                  <div>
-                    <h3>Limitado</h3>
-                    <p>Requiere apoyo o supervisión.</p>
-                  </div>
-                </div>
-
-                <div className="iluo-card level-u">
-                  <span>U</span>
-                  <div>
-                    <h3>Autónomo</h3>
-                    <p>Domina la actividad independientemente.</p>
-                  </div>
-                </div>
-
-                <div className="iluo-card level-o">
-                  <span>O</span>
-                  <div>
-                    <h3>Orientador</h3>
-                    <p>Puede enseñar y capacitar a otros.</p>
-                  </div>
-                </div>
-
-              </div>
-
-            </section>
-
-          </>
+          <GapAnalysis />
 
         )}
 
@@ -749,25 +573,39 @@ function App() {
 
         )}
 
+        {/* ADMINISTRACIÓN DE COLABORADORES */}
+
+        {activeSection === 'Colaboradores' && (
+
+          <EmployeeManagement />
+
+        )}
+
 
         {/* RESTO DE LOS MÓDULOS */}
 
-        {!['Dashboard', 'Departamentos'].includes(activeSection) && (
+        {![
+          'Dashboard',
+          'Departamentos',
+          'Matriz ILUO',
+          'Brechas de capacitación',
+          'Colaboradores'
+        ].includes(activeSection) && (
 
-          <div className="empty-state">
+            <div className="empty-state">
 
-            <GraduationCap size={42} />
+              <GraduationCap size={42} />
 
-            <h2>{activeSection}</h2>
+              <h2>{activeSection}</h2>
 
-            <p>
-              Este módulo se encuentra en construcción.
-              Próximamente estará conectado con nuestra API.
-            </p>
+              <p>
+                Este módulo se encuentra en construcción.
+                Próximamente estará conectado con nuestra API.
+              </p>
 
-          </div>
+            </div>
 
-        )}
+          )}
 
 
         {/* FOOTER */}

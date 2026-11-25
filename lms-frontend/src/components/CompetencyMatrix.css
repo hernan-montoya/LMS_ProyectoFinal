@@ -489,3 +489,159 @@
   }
 
 }
+
+/* ==================================
+   FILTROS AVANZADOS
+================================== */
+
+.matrix-toolbar-advanced {
+  display: block;
+  margin-bottom: 18px;
+}
+
+.matrix-filter-grid {
+  display: grid;
+  grid-template-columns: 1.3fr 1.4fr 0.9fr auto;
+  gap: 13px;
+  align-items: end;
+}
+
+.matrix-filter-search label,
+.matrix-filter-control label {
+  display: block;
+  color: #67738a;
+  font-size: 10px;
+  margin-bottom: 7px;
+}
+
+.matrix-filter-control select {
+  width: 100%;
+  height: 40px;
+  background: white;
+  border: 1px solid #e4e8ef;
+  border-radius: 8px;
+  padding: 0 10px;
+  outline: none;
+  color: #40506a;
+  font-size: 10px;
+}
+
+.matrix-filter-control select:focus {
+  border-color: #8873dc;
+}
+
+.matrix-filter-search .matrix-search {
+  width: 100%;
+  height: 40px;
+}
+
+.matrix-reset-button {
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 0 13px;
+  background: #eeeaff;
+  color: #7157d8;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 10px;
+  white-space: nowrap;
+}
+
+.matrix-reset-button:hover {
+  background: #e2dcff;
+}
+
+.matrix-filter-results {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: #929aaa;
+  font-size: 10px;
+  margin-top: 13px;
+}
+
+
+/* ==================================
+   COLUMNA DE POLIVALENCIA
+================================== */
+
+.competency-table th.mastery-column {
+  min-width: 145px;
+  text-align: center;
+}
+
+.mastery-cell {
+  min-width: 145px;
+  text-align: center !important;
+}
+
+.mastery-value {
+  color: #303d54;
+  font-size: 12px;
+  font-weight: 700;
+  margin-bottom: 7px;
+}
+
+.mastery-track {
+  width: 75px;
+  height: 6px;
+  background: #edf0f5;
+  border-radius: 10px;
+  overflow: hidden;
+  margin: 0 auto;
+}
+
+.mastery-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #7461d1, #9a83ef);
+  border-radius: 10px;
+  transition: width 0.3s ease;
+}
+
+.mastery-cell small {
+  display: block;
+  font-size: 9px;
+  color: #929aaa;
+  margin-top: 6px;
+}
+
+
+/* NOTA INFORMATIVA */
+
+.matrix-polyvalence-note {
+  padding: 11px 14px;
+  background: #f0edff;
+  color: #7465b4;
+  border: 1px solid #e4dfff;
+  border-radius: 9px;
+  font-size: 10px;
+  line-height: 1.6;
+  margin-top: 15px;
+}
+
+
+/* RESPONSIVE */
+
+@media (max-width: 1000px) {
+
+  .matrix-filter-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+}
+
+@media (max-width: 600px) {
+
+  .matrix-filter-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .matrix-reset-button {
+    width: 100%;
+  }
+
+}

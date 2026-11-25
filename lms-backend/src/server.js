@@ -12,6 +12,7 @@ async function startServer() {
     const server = app.listen(PORT, () => {
       console.log(`Servidor LMS disponible en http://localhost:${PORT}`);
       console.log(`Prueba de conexión: http://localhost:${PORT}/api/health`);
+      console.log(`Documentación Swagger: http://localhost:${PORT}/api-docs`);
     });
 
     const shutdown = async (signal) => {
