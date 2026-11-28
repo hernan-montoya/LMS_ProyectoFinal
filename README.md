@@ -76,7 +76,7 @@ El widget del clima consulta Open-Meteo desde el frontend. Para obtener condicio
 Estructura principal de referencia:
 
 ```text
-LMS-ProyectoFinal/
+LMS/
 ├── lms-backend/
 │   ├── src/
 │   │   ├── config/
@@ -137,7 +137,7 @@ El script incluye datos ficticios de ejemplo para facilitar las pruebas. Las eva
 Abre una terminal y entra en la carpeta del backend:
 
 ```bash
-cd LMS-ProyectoFinal/lms-backend
+cd LMS/lms-backend
 ```
 
 Instala las dependencias declaradas por el proyecto:
@@ -182,7 +182,7 @@ El backend debe poder conectarse a MySQL para iniciar correctamente.
 Abre una **segunda terminal** y entra en la carpeta del frontend:
 
 ```bash
-cd LMS-ProyectoFinal/lms-frontend
+cd LMS/lms-frontend
 ```
 
 Instala sus dependencias:
@@ -324,7 +324,7 @@ Antes de utilizar el sistema con información real, deben incorporarse autentica
 Repositorio del proyecto:
 
 ```text
-https://github.com/hernan-montoya/LMS_ProyectoFinal.git
+https://github.com/hernan-montoya/LMS.git
 ```
 
 Comandos habituales desde la carpeta raíz del repositorio:
