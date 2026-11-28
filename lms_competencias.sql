@@ -13,6 +13,7 @@
 -- 5) El script es reejecutable: usa IF NOT EXISTS, claves explícitas y INSERT IGNORE
 --    para evitar duplicar los datos iniciales. Las evaluaciones ya existentes no
 --    se vuelven a sortear al ejecutar el archivo por segunda vez.
+-- 6) Incluye el historial de cambios de evaluaciones ILUO (employee_competency_history).
 -- ============================================================================
 
 SET NAMES utf8mb4;
@@ -123,7 +124,39 @@ CREATE TABLE IF NOT EXISTS employee_competencies (
 ) ENGINE=InnoDB;
 
 -- ---------------------------------------------------------------------------
--- 5. Catálogo de cursos y su relación con competencias
+-- 5. Historial de cambios de evaluaciones ILUO
+-- ---------------------------------------------------------------------------
+-- Conserva los valores anteriores y nuevos cada vez que cambia una evaluación.
+-- IF NOT EXISTS permite ejecutar este script sobre una instalación que ya tenga
+-- esta tabla sin borrar ni reemplazar los registros históricos existentes.
+CREATE TABLE IF NOT EXISTS employee_competency_history (
+    history_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    assessment_id BIGINT NOT NULL,
+    employee_id INT NOT NULL,
+    competency_id INT NOT NULL,
+    previous_iluo_level ENUM('I', 'L', 'U', 'O') NOT NULL,
+    new_iluo_level ENUM('I', 'L', 'U', 'O') NOT NULL,
+    previous_evaluator_name VARCHAR(150) NULL,
+    new_evaluator_name VARCHAR(150) NULL,
+    previous_observations VARCHAR(500) NULL,
+    new_observations VARCHAR(500) NULL,
+    changed_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_history_assessment
+        FOREIGN KEY (assessment_id) REFERENCES employee_competencies(assessment_id)
+        ON DELETE RESTRICT,
+    CONSTRAINT fk_history_employee
+        FOREIGN KEY (employee_id) REFERENCES employees(employee_id)
+        ON DELETE RESTRICT,
+    CONSTRAINT fk_history_competency
+        FOREIGN KEY (competency_id) REFERENCES competencies(competency_id)
+        ON DELETE RESTRICT,
+    INDEX idx_history_assessment (assessment_id),
+    INDEX idx_history_employee (employee_id),
+    INDEX idx_history_competency (competency_id)
+) ENGINE=InnoDB;
+
+-- ---------------------------------------------------------------------------
+-- 6. Catálogo de cursos y su relación con competencias
 -- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS courses (
     course_id INT AUTO_INCREMENT PRIMARY KEY,
@@ -151,7 +184,7 @@ CREATE TABLE IF NOT EXISTS course_competencies (
 ) ENGINE=InnoDB;
 
 -- ---------------------------------------------------------------------------
--- 6. Asignación y seguimiento de cursos
+-- 7. Asignación y seguimiento de cursos
 -- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS enrollments (
     enrollment_id BIGINT AUTO_INCREMENT PRIMARY KEY,
@@ -179,7 +212,7 @@ CREATE TABLE IF NOT EXISTS enrollments (
 ) ENGINE=InnoDB;
 
 -- ---------------------------------------------------------------------------
--- 7. Departamentos
+-- 8. Departamentos
 -- ---------------------------------------------------------------------------
 INSERT INTO departments (department_id, department_code, department_name, description) VALUES
 (1, 'RH', 'Recursos Humanos', 'Administración y desarrollo del talento.'),
@@ -217,7 +250,7 @@ ON DUPLICATE KEY UPDATE
     is_management_area = VALUES(is_management_area);
 
 -- ---------------------------------------------------------------------------
--- 8. Plantilla ficticia de 51 colaboradores
+-- 9. Plantilla ficticia de 51 colaboradores
 -- ---------------------------------------------------------------------------
 INSERT INTO employees
 (employee_id, employee_code, full_name, department_id, work_area_id, job_title, hire_date)
@@ -283,7 +316,7 @@ ON DUPLICATE KEY UPDATE
     hire_date = VALUES(hire_date);
 
 -- ---------------------------------------------------------------------------
--- 9. Catálogo inicial de competencias (5 por cada área)
+-- 10. Catálogo inicial de competencias (5 por cada área)
 -- ---------------------------------------------------------------------------
 INSERT INTO competencies
 (competency_id, work_area_id, competency_code, competency_name, description, sort_order)
@@ -360,7 +393,7 @@ ON DUPLICATE KEY UPDATE
     sort_order = VALUES(sort_order);
 
 -- ---------------------------------------------------------------------------
--- 10. Evaluación inicial demostrativa: niveles aleatorios I, L, U u O
+-- 11. Evaluación inicial demostrativa: niveles aleatorios I, L, U u O
 -- ---------------------------------------------------------------------------
 -- Cada colaborador recibe una evaluación para cada competencia de su área.
 -- RAND() genera la distribución al primer llenado. INSERT IGNORE conserva los
@@ -380,7 +413,7 @@ INNER JOIN competencies c ON c.work_area_id = e.work_area_id
 WHERE e.employment_status = 'Activo';
 
 -- ---------------------------------------------------------------------------
--- 11. Cursos de ejemplo y relación con competencias
+-- 12. Cursos de ejemplo y relación con competencias
 -- ---------------------------------------------------------------------------
 INSERT INTO courses
 (course_id, course_code, course_name, description, modality, duration_hours)
@@ -465,7 +498,7 @@ JOIN competencies cp ON cp.competency_code IN (
 WHERE cr.course_code = 'CUR-008';
 
 -- ---------------------------------------------------------------------------
--- 12. Vistas para facilitar consultas del backend y del Dashboard
+-- 13. Vistas para facilitar consultas del backend y del Dashboard
 -- ---------------------------------------------------------------------------
 CREATE OR REPLACE VIEW vw_employee_competency_matrix AS
 SELECT
@@ -540,7 +573,7 @@ LEFT JOIN employee_competencies ec ON ec.employee_id = e.employee_id
 GROUP BY d.department_id, d.department_name;
 
 -- ---------------------------------------------------------------------------
--- 13. Consultas de comprobación (se muestran al ejecutar el script)
+-- 14. Consultas de comprobación (se muestran al ejecutar el script)
 -- ---------------------------------------------------------------------------
 SELECT 'Departamentos' AS dato, COUNT(*) AS total FROM departments
 UNION ALL
@@ -554,7 +587,9 @@ SELECT 'Evaluaciones ILUO', COUNT(*) FROM employee_competencies
 UNION ALL
 SELECT 'Cursos', COUNT(*) FROM courses
 UNION ALL
-SELECT 'Relaciones curso-competencia', COUNT(*) FROM course_competencies;
+SELECT 'Relaciones curso-competencia', COUNT(*) FROM course_competencies
+UNION ALL
+SELECT 'Historial de evaluaciones ILUO', COUNT(*) FROM employee_competency_history;
 
 SELECT
     d.department_name AS departamento,
