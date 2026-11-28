@@ -1,4 +1,4 @@
-# LMS – Sistema de Gestión de Competencias y Capacitación
+# LMS-DHPM – Sistema de Gestión de Competencias y Capacitación
 
 Aplicación web local para administrar colaboradores, consultar la estructura organizacional y evaluar competencias mediante una matriz ILUO. El sistema integra un frontend en React, una API REST desarrollada con Node.js y Express, y una base de datos MySQL.
 
@@ -76,7 +76,7 @@ El widget del clima consulta Open-Meteo desde el frontend. Para obtener condicio
 Estructura principal de referencia:
 
 ```text
-LMS/
+LMS-DHPM/
 ├── lms-backend/
 │   ├── src/
 │   │   ├── config/
@@ -137,7 +137,7 @@ El script incluye datos ficticios de ejemplo para facilitar las pruebas. Las eva
 Abre una terminal y entra en la carpeta del backend:
 
 ```bash
-cd LMS/lms-backend
+cd LMS-DHPM/lms-backend
 ```
 
 Instala las dependencias declaradas por el proyecto:
@@ -182,7 +182,7 @@ El backend debe poder conectarse a MySQL para iniciar correctamente.
 Abre una **segunda terminal** y entra en la carpeta del frontend:
 
 ```bash
-cd LMS/lms-frontend
+cd LMS-DHPM/lms-frontend
 ```
 
 Instala sus dependencias:
@@ -324,7 +324,7 @@ Antes de utilizar el sistema con información real, deben incorporarse autentica
 Repositorio del proyecto:
 
 ```text
-https://github.com/hernan-montoya/LMS.git
+https://github.com/hernan-montoya/LMS-DHPM.git
 ```
 
 Comandos habituales desde la carpeta raíz del repositorio:
@@ -340,5 +340,5 @@ Antes de realizar un commit, verifica que `.env`, `node_modules` y otros archivo
 
 ---
 
-**LMS – Sistema de Gestión de Competencias y Capacitación**  
+**LMS-DHPM – Sistema de Gestión de Competencias y Capacitación**  
 Proyecto académico de Backend Intermedio.
