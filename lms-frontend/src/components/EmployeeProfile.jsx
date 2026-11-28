@@ -5,7 +5,12 @@ import {
   PieChart,
   Pie,
   Cell,
-  Tooltip
+  Tooltip,
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid
 } from 'recharts';
 
 import {
@@ -17,10 +22,13 @@ import {
   ClipboardList,
   TrendingUp,
   AlertTriangle,
-  LoaderCircle
+  LoaderCircle,
+  History,
+  TrendingDown
 } from 'lucide-react';
 
 import './EmployeeProfile.css';
+import './EmployeeProfileHistory.css';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -58,9 +66,32 @@ const formatDate = (date) => {
 
   if (!date) return '—';
 
-  return new Date(`${date.substring(0, 10)}T00:00:00`)
+  return new Date(`${String(date).substring(0, 10)}T00:00:00`)
     .toLocaleDateString('es-MX');
 
+};
+
+const formatDateTime = (date) => {
+
+  if (!date) return 'Fecha no disponible';
+
+  const normalizedDate = String(date).replace(' ', 'T');
+  const parsedDate = new Date(normalizedDate);
+
+  if (Number.isNaN(parsedDate.getTime())) return String(date);
+
+  return parsedDate.toLocaleString('es-MX', {
+    dateStyle: 'medium',
+    timeStyle: 'short'
+  });
+
+};
+
+const ILUO_VALUES = {
+  I: 1,
+  L: 2,
+  U: 3,
+  O: 4
 };
 
 
@@ -71,6 +102,12 @@ function EmployeeProfile({ employee, onClose }) {
   const [loading, setLoading] = useState(true);
 
   const [error, setError] = useState('');
+
+  // Historial de modificaciones por evaluación
+  const [historyByAssessment, setHistoryByAssessment] = useState({});
+  const [selectedHistoryAssessmentId, setSelectedHistoryAssessmentId] = useState('');
+  const [loadingHistory, setLoadingHistory] = useState(false);
+  const [historyError, setHistoryError] = useState('');
 
 
   // CONSULTAR EVALUACIONES DEL COLABORADOR
@@ -127,6 +164,71 @@ function EmployeeProfile({ employee, onClose }) {
 
         setRecords(employeeRecords);
 
+        // Seleccionar inicialmente la primera competencia con evaluación
+        const assessments = employeeRecords.filter(record => record.assessment_id);
+        setSelectedHistoryAssessmentId(
+          assessments.length ? String(assessments[0].assessment_id) : ''
+        );
+
+        // Consultar el historial de cada evaluación sin bloquear el perfil
+        setHistoryByAssessment({});
+        setHistoryError('');
+
+        if (assessments.length > 0) {
+          setLoadingHistory(true);
+
+          const historyResults = await Promise.allSettled(
+            assessments.map(async (record) => {
+              const historyResponse = await fetch(
+                `${API_URL}/assessments/${record.assessment_id}/history`,
+                { signal: controller.signal }
+              );
+
+              if (!historyResponse.ok) {
+                throw new Error(`Error HTTP ${historyResponse.status}`);
+              }
+
+              const historyResult = await historyResponse.json();
+
+              if (!historyResult.success || !Array.isArray(historyResult.data)) {
+                throw new Error('Respuesta de historial no válida.');
+              }
+
+              return {
+                assessmentId: String(record.assessment_id),
+                assessment: historyResult.assessment,
+                data: historyResult.data
+              };
+            })
+          );
+
+          if (!controller.signal.aborted) {
+            const historyMap = {};
+            let failedRequests = 0;
+
+            historyResults.forEach((result) => {
+              if (result.status === 'fulfilled') {
+                historyMap[result.value.assessmentId] = result.value;
+              } else {
+                failedRequests++;
+                console.error('Error al consultar historial ILUO:', result.reason);
+              }
+            });
+
+            setHistoryByAssessment(historyMap);
+
+            if (failedRequests > 0) {
+              setHistoryError(
+                `No fue posible consultar el historial de ${failedRequests} competencia(s).`
+              );
+            }
+
+            setLoadingHistory(false);
+          }
+        } else {
+          setLoadingHistory(false);
+        }
+
         console.log(
           `Perfil de ${employee.full_name}:`,
           employeeRecords
@@ -146,9 +248,8 @@ function EmployeeProfile({ employee, onClose }) {
       } finally {
 
         if (!controller.signal.aborted) {
-
           setLoading(false);
-
+          setLoadingHistory(false);
         }
 
       }
@@ -248,6 +349,51 @@ function EmployeeProfile({ employee, onClose }) {
     };
 
   }, [records]);
+
+  const selectedHistory = historyByAssessment[selectedHistoryAssessmentId];
+  const selectedHistoryEvents = selectedHistory?.data || [];
+  const selectedCurrentRecord = records.find(
+    record => String(record.assessment_id) === selectedHistoryAssessmentId
+  );
+
+  // Preparar la secuencia de niveles para la gráfica.
+  // La fecha del nivel previo al primer cambio no se conoce, por eso se etiqueta como Inicio.
+  const historyChartData = useMemo(() => {
+    if (selectedHistoryEvents.length === 0) return [];
+
+    const firstEvent = selectedHistoryEvents[0];
+    const initialLevel = String(firstEvent.previous_iluo_level || '').toUpperCase();
+
+    const points = [];
+
+    if (ILUO_VALUES[initialLevel]) {
+      points.push({
+        step: 'Inicio',
+        level: initialLevel,
+        levelValue: ILUO_VALUES[initialLevel],
+        dateLabel: 'Nivel previo al primer cambio (fecha no registrada)',
+        evaluator: firstEvent.previous_evaluator_name || 'Sin registrar',
+        observations: firstEvent.previous_observations || 'Sin observaciones'
+      });
+    }
+
+    selectedHistoryEvents.forEach((event, index) => {
+      const level = String(event.new_iluo_level || '').toUpperCase();
+
+      if (ILUO_VALUES[level]) {
+        points.push({
+          step: `Cambio ${index + 1}`,
+          level,
+          levelValue: ILUO_VALUES[level],
+          dateLabel: formatDateTime(event.changed_at),
+          evaluator: event.new_evaluator_name || 'Sin registrar',
+          observations: event.new_observations || 'Sin observaciones'
+        });
+      }
+    });
+
+    return points;
+  }, [selectedHistoryEvents]);
 
 
   return (
@@ -716,6 +862,163 @@ function EmployeeProfile({ employee, onClose }) {
 
         )}
 
+
+        {/* HISTORIAL Y EVOLUCIÓN DE COMPETENCIAS */}
+        {!loading && !error && (
+          <section className="profile-history-section">
+            <div className="profile-section-title profile-history-heading">
+              <div className="profile-history-title">
+                <History size={19} />
+                <h3>Historial y evolución de competencias</h3>
+              </div>
+              <span>{selectedHistoryEvents.length} cambios registrados</span>
+            </div>
+
+            <p className="profile-history-description">
+              Consulta los cambios de nivel ILUO, evaluadores y observaciones de cada competencia.
+            </p>
+
+            <div className="profile-history-selector">
+              <label htmlFor="profile-history-competency">Competencia</label>
+              <select
+                id="profile-history-competency"
+                value={selectedHistoryAssessmentId}
+                onChange={(event) => setSelectedHistoryAssessmentId(event.target.value)}
+                disabled={records.filter(record => record.assessment_id).length === 0}
+              >
+                {records.filter(record => record.assessment_id).length === 0 ? (
+                  <option value="">Sin evaluaciones disponibles</option>
+                ) : (
+                  records
+                    .filter(record => record.assessment_id)
+                    .map(record => (
+                      <option
+                        key={record.assessment_id}
+                        value={String(record.assessment_id)}
+                      >
+                        {record.competency_name}
+                      </option>
+                    ))
+                )}
+              </select>
+            </div>
+
+            {loadingHistory ? (
+              <div className="profile-history-state">
+                <LoaderCircle size={22} className="profile-spinner" />
+                <span>Consultando historial de evaluaciones...</span>
+              </div>
+            ) : (
+              <>
+                {historyError && (
+                  <div className="profile-history-error">{historyError}</div>
+                )}
+
+                {selectedCurrentRecord && (
+                  <div className="profile-current-level">
+                    <span>Nivel vigente</span>
+                    {LEVELS[String(selectedCurrentRecord.iluo_level || '').toUpperCase()] ? (
+                      <strong className={`profile-level-badge ${LEVELS[String(selectedCurrentRecord.iluo_level).toUpperCase()].className}`}>
+                        {String(selectedCurrentRecord.iluo_level).toUpperCase()} · {LEVELS[String(selectedCurrentRecord.iluo_level).toUpperCase()].name}
+                      </strong>
+                    ) : (
+                      <strong>Sin evaluar</strong>
+                    )}
+                    <small>Última evaluación: {formatDate(selectedCurrentRecord.evaluation_date)}</small>
+                  </div>
+                )}
+
+                {selectedHistoryEvents.length === 0 ? (
+                  <div className="profile-history-empty">
+                    <TrendingDown size={24} />
+                    <strong>Esta competencia todavía no tiene cambios históricos.</strong>
+                    <span>Las modificaciones que se realicen a partir de ahora aparecerán en esta sección.</span>
+                  </div>
+                ) : (
+                  <>
+                    <div className="profile-history-chart">
+                      <div className="profile-history-chart-heading">
+                        <h4>Evolución del nivel ILUO</h4>
+                        <span>I = 1 · L = 2 · U = 3 · O = 4</span>
+                      </div>
+                      <ResponsiveContainer width="100%" height={260}>
+                        <LineChart data={historyChartData} margin={{ top: 12, right: 18, left: 0, bottom: 8 }}>
+                          <CartesianGrid strokeDasharray="3 3" />
+                          <XAxis dataKey="step" />
+                          <YAxis
+                            domain={[1, 4]}
+                            ticks={[1, 2, 3, 4]}
+                            tickFormatter={(value) => ({ 1: 'I', 2: 'L', 3: 'U', 4: 'O' }[value] || value)}
+                            width={34}
+                          />
+                          <Tooltip
+                            labelFormatter={(_, payload) => payload?.[0]?.payload?.dateLabel || ''}
+                            formatter={(value, _name, item) => [
+                              `${item.payload.level} · ${LEVELS[item.payload.level]?.name || ''}`,
+                              'Nivel ILUO'
+                            ]}
+                          />
+                          <Line
+                            type="stepAfter"
+                            dataKey="levelValue"
+                            name="Nivel ILUO"
+                            stroke="#6958cb"
+                            strokeWidth={3}
+                            dot={{ r: 5, fill: '#6958cb' }}
+                            activeDot={{ r: 7 }}
+                          />
+                        </LineChart>
+                      </ResponsiveContainer>
+                    </div>
+
+                    <div className="profile-history-table-wrapper">
+                      <h4>Detalle de modificaciones</h4>
+                      <table className="profile-history-table">
+                        <thead>
+                          <tr>
+                            <th>FECHA</th>
+                            <th>CAMBIO ILUO</th>
+                            <th>EVALUADOR</th>
+                            <th>OBSERVACIONES</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {selectedHistoryEvents.map((event) => {
+                            const previousLevel = String(event.previous_iluo_level || '').toUpperCase();
+                            const newLevelValue = String(event.new_iluo_level || '').toUpperCase();
+                            const previousConfig = LEVELS[previousLevel];
+                            const newConfig = LEVELS[newLevelValue];
+
+                            return (
+                              <tr key={event.history_id}>
+                                <td>{formatDateTime(event.changed_at)}</td>
+                                <td>
+                                  <span className={`profile-level-badge ${previousConfig?.className || ''}`}>
+                                    {previousLevel}
+                                  </span>
+                                  <span className="profile-history-arrow"> → </span>
+                                  <span className={`profile-level-badge ${newConfig?.className || ''}`}>
+                                    {newLevelValue}
+                                  </span>
+                                </td>
+                                <td>{event.new_evaluator_name || 'Sin registrar'}</td>
+                                <td>{event.new_observations || 'Sin observaciones'}</td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </>
+                )}
+              </>
+            )}
+
+            <div className="profile-history-note">
+              El historial registra modificaciones realizadas desde la incorporación de esta funcionalidad. No reconstruye evaluaciones anteriores que no hayan sido almacenadas históricamente.
+            </div>
+          </section>
+        )}
 
         <div className="profile-footer">
 

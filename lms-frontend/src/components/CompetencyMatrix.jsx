@@ -5,7 +5,6 @@ import {
     Search,
     Users,
     Layers3,
-    CalendarDays,
     X,
     Save,
     LoaderCircle,
@@ -14,6 +13,7 @@ import {
 } from 'lucide-react';
 
 import './CompetencyMatrix.css';
+import './CompetencyMatrixEnhancements.css';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -38,6 +38,9 @@ function CompetencyMatrix({ workArea }) {
     const [selectedCompetency, setSelectedCompetency] = useState('all');
 
     const [levelFilter, setLevelFilter] = useState('all');
+
+    // Ordenamiento de colaboradores en la matriz
+    const [sortBy, setSortBy] = useState('name_asc');
 
     const [selectedEvaluation, setSelectedEvaluation] = useState(null);
 
@@ -200,6 +203,8 @@ function CompetencyMatrix({ workArea }) {
 
                 masteredCompetencies,
 
+                pendingCompetencies: Math.max(competencyList.length - evaluatedRecords.length, 0),
+
                 proficiencyPercent
 
             };
@@ -304,7 +309,87 @@ function CompetencyMatrix({ workArea }) {
     ]);
 
 
-    // 4. Abrir ventana de edición
+    // 4. Ordenar colaboradores sin alterar el arreglo original
+    const sortedEmployees = useMemo(() => {
+
+        const nameCompare = (a, b) =>
+            a.full_name.localeCompare(b.full_name, 'es', { sensitivity: 'base' });
+
+        return [...filteredEmployees].sort((a, b) => {
+
+            switch (sortBy) {
+                case 'name_desc':
+                    return nameCompare(b, a);
+
+                case 'mastery_desc':
+                    return (b.proficiencyPercent - a.proficiencyPercent) || nameCompare(a, b);
+
+                case 'mastery_asc':
+                    return (a.proficiencyPercent - b.proficiencyPercent) || nameCompare(a, b);
+
+                case 'mastered_desc':
+                    return (b.masteredCompetencies - a.masteredCompetencies) ||
+                        (b.proficiencyPercent - a.proficiencyPercent) || nameCompare(a, b);
+
+                case 'mastered_asc':
+                    return (a.masteredCompetencies - b.masteredCompetencies) ||
+                        (a.proficiencyPercent - b.proficiencyPercent) || nameCompare(a, b);
+
+                case 'pending_desc':
+                    return (b.pendingCompetencies - a.pendingCompetencies) || nameCompare(a, b);
+
+                case 'name_asc':
+                default:
+                    return nameCompare(a, b);
+            }
+
+        });
+
+    }, [filteredEmployees, sortBy]);
+
+
+    // 5. Indicadores de cobertura y dominio del área
+    const matrixMetrics = useMemo(() => {
+
+        const employeesWithEvaluations = employees.filter(
+            employee => employee.evaluatedCompetencies > 0
+        );
+
+        const totalEvaluations = employees.reduce(
+            (total, employee) => total + employee.evaluatedCompetencies, 0
+        );
+
+        const totalMastered = employees.reduce(
+            (total, employee) => total + employee.masteredCompetencies, 0
+        );
+
+        const pendingEvaluations = employees.reduce(
+            (total, employee) => total + employee.pendingCompetencies, 0
+        );
+
+        const employeesFullyEvaluated = employees.filter(
+            employee => employee.pendingCompetencies === 0
+        ).length;
+
+        return {
+            averageProficiency: employeesWithEvaluations.length
+                ? Math.round(
+                    employeesWithEvaluations.reduce(
+                        (total, employee) => total + employee.proficiencyPercent, 0
+                    ) / employeesWithEvaluations.length
+                )
+                : 0,
+            overallProficiency: totalEvaluations
+                ? Math.round((totalMastered / totalEvaluations) * 100)
+                : 0,
+            pendingEvaluations,
+            employeesFullyEvaluated
+        };
+
+    }, [employees]);
+
+
+    // 6. Abrir ventana de edición
 
     const openEvaluation = (evaluation, employee) => {
 
@@ -610,6 +695,8 @@ function CompetencyMatrix({ workArea }) {
 
                             setLevelFilter('all');
 
+                            setSortBy('name_asc');
+
                         }}
 
                     >
@@ -634,6 +721,56 @@ function CompetencyMatrix({ workArea }) {
 
 
             </div>
+
+
+            {/* ORDENAMIENTO E INDICADORES DE LA MATRIZ */}
+            <section className="matrix-sort-panel">
+
+                <div className="matrix-sort-control">
+                    <div className="matrix-sort-title">
+                        <Filter size={17} />
+                        <label htmlFor="matrix-sort-select">Ordenar colaboradores</label>
+                    </div>
+                    <select
+                        id="matrix-sort-select"
+                        value={sortBy}
+                        onChange={event => setSortBy(event.target.value)}
+                    >
+                        <option value="name_asc">Nombre: A a Z</option>
+                        <option value="name_desc">Nombre: Z a A</option>
+                        <option value="mastery_desc">Dominio: mayor a menor</option>
+                        <option value="mastery_asc">Dominio: menor a mayor</option>
+                        <option value="mastered_desc">Competencias dominadas: más a menos</option>
+                        <option value="mastered_asc">Competencias dominadas: menos a más</option>
+                        <option value="pending_desc">Pendientes de evaluación: más a menos</option>
+                    </select>
+                    <small>El ordenamiento se aplica a los resultados de los filtros actuales.</small>
+                </div>
+
+                <div className="matrix-overview-grid">
+                    <article className="matrix-overview-card">
+                        <span>Dominio global del área</span>
+                        <strong>{matrixMetrics.overallProficiency}%</strong>
+                        <small>Competencias U + O sobre evaluaciones registradas</small>
+                    </article>
+                    <article className="matrix-overview-card">
+                        <span>Promedio por colaborador</span>
+                        <strong>{matrixMetrics.averageProficiency}%</strong>
+                        <small>Promedio de dominio individual</small>
+                    </article>
+                    <article className="matrix-overview-card">
+                        <span>Evaluaciones pendientes</span>
+                        <strong>{matrixMetrics.pendingEvaluations}</strong>
+                        <small>Competencias sin nivel ILUO registrado</small>
+                    </article>
+                    <article className="matrix-overview-card">
+                        <span>Evaluación completa</span>
+                        <strong>{matrixMetrics.employeesFullyEvaluated}/{employees.length}</strong>
+                        <small>Colaboradores evaluados en todas las competencias</small>
+                    </article>
+                </div>
+
+            </section>
 
 
             {/* LEYENDA ILUO */}
@@ -669,9 +806,9 @@ function CompetencyMatrix({ workArea }) {
 
             {/* TABLA DE COMPETENCIAS */}
 
-            <div className="matrix-table-wrapper">
+            <div className="matrix-table-wrapper matrix-table-wrapper-enhanced">
 
-                <table className="competency-table">
+                <table className="competency-table competency-table-enhanced">
 
                     <thead>
 
@@ -706,7 +843,7 @@ function CompetencyMatrix({ workArea }) {
 
                     <tbody>
 
-                        {filteredEmployees.map((employee) => (
+                        {sortedEmployees.map((employee) => (
 
                             <tr key={employee.employee_id}>
 
@@ -746,6 +883,9 @@ function CompetencyMatrix({ workArea }) {
 
 
                                     <small>{employee.proficiencyPercent}% de dominio</small>
+                                    <small className="mastery-pending">
+                                        {employee.pendingCompetencies} pendientes
+                                    </small>
 
                                 </td>
 

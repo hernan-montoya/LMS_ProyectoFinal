@@ -34,6 +34,23 @@ const formatDate = (date) => {
 };
 
 
+// Validar que la fecha exista realmente y tenga formato YYYY-MM-DD
+const isValidISODate = (value) => {
+    if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+        return false;
+    }
+
+    const [year, month, day] = value.split('-').map(Number);
+    const date = new Date(Date.UTC(year, month - 1, day));
+
+    return (
+        date.getUTCFullYear() === year &&
+        date.getUTCMonth() === month - 1 &&
+        date.getUTCDate() === day
+    );
+};
+
+
 // Formulario inicial
 
 const EMPTY_FORM = {
@@ -392,125 +409,120 @@ function EmployeeManagement() {
     const saveEmployee = async (event) => {
 
         event.preventDefault();
-
         setFormError('');
 
+        const employeeCode = form.employee_code.trim();
+        const fullName = form.full_name.trim();
+        const jobTitle = form.job_title.trim();
 
-        if (!form.employee_code.trim()) {
-
+        // Validaciones de campos obligatorios
+        if (!employeeCode) {
             setFormError('El ID del empleado es obligatorio.');
-
             return;
-
         }
 
-        if (!form.full_name.trim()) {
-
+        if (!fullName) {
             setFormError('El nombre completo es obligatorio.');
-
             return;
-
         }
 
         if (!form.department_id || !form.work_area_id) {
-
-            setFormError('Selecciona el departamento y el área.');
-
+            setFormError('Selecciona el departamento y el área de trabajo.');
             return;
-
         }
 
-        if (!form.job_title.trim()) {
-
+        if (!jobTitle) {
             setFormError('El puesto es obligatorio.');
-
             return;
-
         }
 
         if (!form.hire_date) {
-
             setFormError('La fecha de ingreso es obligatoria.');
-
             return;
-
         }
 
+        // Validaciones de longitud conforme a la estructura de MySQL
+        if (employeeCode.length > 20) {
+            setFormError('El ID del empleado no puede superar 20 caracteres.');
+            return;
+        }
+
+        if (fullName.length < 2 || fullName.length > 150) {
+            setFormError('El nombre debe tener entre 2 y 150 caracteres.');
+            return;
+        }
+
+        if (jobTitle.length < 2 || jobTitle.length > 120) {
+            setFormError('El puesto debe tener entre 2 y 120 caracteres.');
+            return;
+        }
+
+        // Validaciones de identificadores y fecha
+        if (!Number.isSafeInteger(Number(form.department_id)) || Number(form.department_id) <= 0) {
+            setFormError('Selecciona un departamento válido.');
+            return;
+        }
+
+        if (!Number.isSafeInteger(Number(form.work_area_id)) || Number(form.work_area_id) <= 0) {
+            setFormError('Selecciona un área de trabajo válida.');
+            return;
+        }
+
+        if (!isValidISODate(form.hire_date)) {
+            setFormError('La fecha de ingreso no es válida. Utiliza una fecha real.');
+            return;
+        }
+
+        if (!['Activo', 'Inactivo'].includes(form.employment_status)) {
+            setFormError('Selecciona un estado laboral válido.');
+            return;
+        }
 
         const payload = {
-
-            employee_code: form.employee_code.trim(),
-
-            full_name: form.full_name.trim(),
-
+            employee_code: employeeCode,
+            full_name: fullName,
             department_id: Number(form.department_id),
-
             work_area_id: Number(form.work_area_id),
-
-            job_title: form.job_title.trim(),
-
+            job_title: jobTitle,
             hire_date: form.hire_date,
-
             employment_status: form.employment_status
-
         };
 
-
         try {
-
             setSaving(true);
 
             const isEditing = Boolean(form.employee_id);
-
             const url = isEditing
-
                 ? `${API_URL}/employees/${form.employee_id}`
-
                 : `${API_URL}/employees`;
 
-
             const response = await fetch(url, {
-
                 method: isEditing ? 'PUT' : 'POST',
-
                 headers: {
                     'Content-Type': 'application/json'
                 },
-
                 body: JSON.stringify(payload)
-
             });
-
 
             const result = await response.json();
 
             if (!response.ok || !result.success) {
-
                 throw new Error(
                     result.message || 'No fue posible guardar el colaborador.'
                 );
-
             }
 
-
             setShowModal(false);
-
             await fetchEmployees();
 
         } catch (err) {
-
-            console.error(err);
-
-            setFormError(err.message);
-
+            console.error('Error al guardar colaborador:', err);
+            setFormError(err.message || 'Ocurrió un error al guardar el colaborador.');
         } finally {
-
             setSaving(false);
-
         }
 
     };
-
 
     // 12. DAR DE BAJA A UN COLABORADOR
 
@@ -1095,6 +1107,8 @@ function EmployeeManagement() {
 
                                     placeholder="EMP052"
 
+                                    maxLength={20}
+
                                     required
 
                                 />
@@ -1115,6 +1129,8 @@ function EmployeeManagement() {
                                     onChange={handleChange}
 
                                     placeholder="Nombre y apellidos"
+
+                                    maxLength={150}
 
                                     required
 
@@ -1231,6 +1247,8 @@ function EmployeeManagement() {
                                     onChange={handleChange}
 
                                     placeholder="Puesto del colaborador"
+
+                                    maxLength={120}
 
                                     required
 

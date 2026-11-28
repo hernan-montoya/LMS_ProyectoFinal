@@ -5,6 +5,8 @@ import GapAnalysis from './components/GapAnalysis';
 import EmployeeManagement from './components/EmployeeManagement';
 import MatrixExplorer from './components/MatrixExplorer';
 import WeatherWidget from './components/WeatherWidget';
+import Reports from './components/Reports';
+import TrainingManagement from './components/TrainingManagement';
 
 import {
   Activity,
@@ -581,6 +583,17 @@ function App() {
 
         )}
 
+        {/* MÓDULO DE CAPACITACIÓN */}
+
+        {activeSection === 'Capacitación' && (
+          <TrainingManagement />
+        )}
+
+        {/* MÓDULO DE REPORTES */}
+
+        {activeSection === 'Reportes' && (
+          <Reports />
+        )}
 
         {/* RESTO DE LOS MÓDULOS */}
 
@@ -589,7 +602,10 @@ function App() {
           'Departamentos',
           'Matriz ILUO',
           'Brechas de capacitación',
-          'Colaboradores'
+          'Colaboradores',
+          'Capacitación',
+          'Reportes',
+
         ].includes(activeSection) && (
 
             <div className="empty-state">

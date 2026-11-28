@@ -2,7 +2,7 @@
 
 Aplicación web local para administrar colaboradores, consultar la estructura organizacional y evaluar competencias mediante una matriz ILUO. El sistema integra un frontend en React, una API REST desarrollada con Node.js y Express, y una base de datos MySQL.
 
-> **Estado del proyecto:** versión académica funcional para ejecución local. Algunas opciones visibles en el menú, como Capacitación y Reportes, permanecen en construcción y no deben considerarse módulos terminados.
+> **Estado del proyecto:** versión académica funcional para ejecución local. Incluye administración de colaboradores, matriz ILUO, análisis de brechas, administración y seguimiento de capacitación, reportes y exportación a Excel. La impartición de cursos en línea y la exportación a PDF quedan fuera del alcance de esta versión.
 
 ## 1. Objetivo
 
@@ -15,9 +15,12 @@ Centralizar información de colaboradores y competencias por área de trabajo, f
 - **Matriz ILUO:** consulta de competencias por área y actualización de evaluaciones.
 - **Brechas de capacitación:** consulta y filtrado de brechas por departamento, área y competencia.
 - **Colaboradores:** alta, consulta, edición y baja lógica. El directorio permite consultar colaboradores activos e inactivos.
-- **Perfil individual:** consulta de información general y resultados de competencias del colaborador.
+- **Perfil individual:** consulta de información general, resultados de competencias e historial de cambios ILUO.
+- **Capacitación:** catálogo de cursos, relación con competencias, asignación a colaboradores activos, seguimiento de estatus, fechas, calificaciones y recomendaciones vinculadas con brechas ILUO I/L.
+- **Reportes:** indicadores globales y departamentales, distribución ILUO y análisis de brechas.
+- **Exportación a Excel:** reportes en un libro `.xlsx` con cinco hojas (Resumen, Distribución ILUO, Dominio por departamento, Brechas y Colaboradores), además del historial de asignaciones de capacitación.
 - **Widget del clima:** consulta del clima actual mediante Open-Meteo y ubicación del navegador, con permiso del usuario.
-- **Documentación de API:** Swagger UI / OpenAPI para consultar y probar los endpoints disponibles.
+- **Documentación de API:** Swagger UI / OpenAPI para consultar y probar los endpoints disponibles, incluidos los de capacitación.
 
 ### Regla de visualización por estado laboral
 
@@ -35,6 +38,7 @@ La baja de un colaborador es lógica: el registro se conserva en MySQL y su esta
 |---|---|
 | Frontend | React, JavaScript, Vite |
 | Interfaz y visualizaciones | CSS, Recharts, Lucide React |
+| Exportación Excel | SheetJS (`xlsx`) |
 | Backend | Node.js, Express |
 | Acceso a datos | mysql2 |
 | Base de datos | MySQL 8.0 o superior |
@@ -96,6 +100,11 @@ LMS-ProyectoFinal/
 ├── lms-frontend/
 │   ├── src/
 │   │   ├── components/
+│   │   │   ├── Reports.jsx
+│   │   │   ├── Reports.css
+│   │   │   ├── TrainingManagement.jsx
+│   │   │   ├── TrainingManagement.css
+│   │   │   └── ...
 │   │   ├── App.jsx
 │   │   ├── App.css
 │   │   └── index.css
@@ -218,8 +227,20 @@ Todas las rutas de la tabla usan el prefijo `/api`. La documentación interactiv
 | GET | `/api/departments/:departmentId/areas` | Lista las áreas activas de un departamento y su conteo de colaboradores activos. |
 | GET | `/api/areas/:workAreaId/competencies` | Consulta las competencias y evaluaciones del área para la matriz ILUO. |
 | PUT | `/api/assessments/:assessmentId` | Actualiza el nivel ILUO y los datos de evaluación. |
+| GET | `/api/assessments/:assessmentId/history` | Consulta los cambios históricos de una evaluación ILUO. |
 | GET | `/api/dashboard/summary` | Obtiene indicadores generales, por departamento y por área. |
 | GET | `/api/dashboard/gaps` | Obtiene el análisis de brechas por departamento, área y competencia. |
+| GET | `/api/training/competencies` | Lista competencias activas para relacionarlas con cursos. |
+| GET | `/api/training/courses` | Consulta y filtra el catálogo de cursos. |
+| GET | `/api/training/courses/:courseId` | Consulta el detalle de un curso y sus competencias. |
+| POST | `/api/training/courses` | Registra un curso y sus competencias relacionadas. |
+| PUT | `/api/training/courses/:courseId` | Actualiza un curso y sus relaciones con competencias. |
+| PATCH | `/api/training/courses/:courseId/status` | Activa o desactiva un curso sin eliminarlo. |
+| GET | `/api/training/summary` | Obtiene indicadores de capacitación. Admite filtro por departamento. |
+| GET | `/api/training/enrollments` | Consulta y filtra las asignaciones de cursos. |
+| POST | `/api/training/enrollments` | Asigna un curso a uno o varios colaboradores activos. |
+| PATCH | `/api/training/enrollments/:enrollmentId` | Actualiza el estado y los datos de seguimiento de una asignación. |
+| GET | `/api/training/recommendations` | Sugiere cursos relacionados con competencias en niveles ILUO I o L. |
 
 ### Parámetro de estado de colaboradores
 
@@ -258,9 +279,11 @@ http://localhost:3000/api-docs
 
 Swagger UI permite:
 
-- Consultar los endpoints disponibles y sus métodos HTTP.
+- Consultar las operaciones y métodos HTTP declarados en `src/config/openapi.yaml`.
 - Revisar parámetros, cuerpos JSON y respuestas documentadas.
 - Ejecutar solicitudes contra el backend local.
+
+El módulo de Capacitación agrega las operaciones bajo `/api/training`. Para que también aparezcan en Swagger, el archivo `openapi.yaml` debe incluir la etiqueta y las rutas del fragmento `openapi-training.yaml` entregado con la Etapa 3.15. El montaje funcional de las rutas en Express es independiente de su documentación en Swagger.
 
 Para probar endpoints de lectura (`GET`), selecciona la operación, pulsa **Try it out** y después **Execute**.
 
@@ -275,7 +298,10 @@ Las operaciones `POST`, `PUT` y `DELETE` modifican datos reales de MySQL. Utiliz
 5. Actualizar una evaluación de prueba y verificar el cambio en MySQL.
 6. Dar de baja un colaborador de prueba y comprobar que permanece en el directorio con estado `Inactivo`, pero deja de aparecer en Departamentos y en la Matriz ILUO.
 7. Consultar Dashboard y Brechas para comparar los indicadores con las respuestas de la API.
-8. Probar el widget del clima y conceder permiso de ubicación al navegador cuando lo solicite.
+8. Probar el catálogo de cursos, las asignaciones, el seguimiento de estatus y las recomendaciones ILUO del módulo Capacitación.
+9. Generar el Excel de Reportes y comprobar sus cinco hojas: Resumen, Distribución ILUO, Dominio por departamento, Brechas y Colaboradores.
+10. Generar el Excel de Capacitación y comprobar las asignaciones exportadas, respetando los filtros aplicados.
+11. Probar el widget del clima y conceder permiso de ubicación al navegador cuando lo solicite.
 
 ## 13. Seguridad y consideraciones
 
@@ -285,9 +311,13 @@ Las operaciones `POST`, `PUT` y `DELETE` modifican datos reales de MySQL. Utiliz
 - Los datos iniciales son demostrativos y no deben interpretarse como evaluaciones reales del personal.
 - La ubicación del navegador se solicita para consultar el clima; el usuario puede denegar ese permiso.
 
-## 14. Módulos fuera del alcance funcional de esta versión
+## 14. Validación funcional y alcance
 
-La navegación incluye opciones que aún pueden estar en construcción. La gestión integral de cursos y asignaciones, los reportes descargables y el historial de cambios de evaluaciones pueden desarrollarse en una fase posterior. La presencia de tablas o entradas de menú no significa que esos flujos estén terminados en la interfaz.
+Durante la integración final se comprobó manualmente la carga del catálogo de cursos desde MySQL, el registro de una asignación de capacitación, la actualización de su estado a `En progreso` y la generación de los archivos Excel desde Reportes y Capacitación. Las exportaciones se verificaron en la aplicación local.
+
+El módulo de Capacitación administra el catálogo, las asignaciones y el seguimiento de cursos; no ofrece aulas virtuales, reproducción de video, lecciones, exámenes en línea ni emisión de certificados. La versión actual incorpora exportación a Excel, pero no exportación a PDF. Las pruebas manuales no sustituyen una suite automatizada de pruebas.
+
+Antes de utilizar el sistema con información real, deben incorporarse autenticación, autorización por roles, controles de acceso y una política de respaldos. Los niveles ILUO iniciales del script SQL son datos de demostración aleatorios y deben sustituirse por evaluaciones reales.
 
 ## 15. Control de versiones
 

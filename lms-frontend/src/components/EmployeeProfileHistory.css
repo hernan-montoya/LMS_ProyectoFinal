@@ -1,0 +1,241 @@
+/* Historial y evolución de competencias - EmployeeProfile */
+.profile-history-section {
+  margin-top: 24px;
+  padding: 22px;
+  border: 1px solid #e7e8ef;
+  border-radius: 16px;
+  background: #ffffff;
+  box-shadow: 0 8px 24px rgba(30, 35, 90, 0.05);
+}
+
+.profile-history-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.profile-history-title {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  color: #5546b8;
+}
+
+.profile-history-title h3 {
+  margin: 0;
+  color: #25263a;
+  font-size: 1.05rem;
+}
+
+.profile-history-heading > span {
+  color: #73758a;
+  font-size: 0.82rem;
+}
+
+.profile-history-description {
+  margin: 9px 0 18px;
+  color: #73758a;
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
+
+.profile-history-selector {
+  display: grid;
+  grid-template-columns: minmax(130px, 170px) minmax(220px, 1fr);
+  align-items: center;
+  gap: 12px;
+  max-width: 640px;
+  margin-bottom: 18px;
+}
+
+.profile-history-selector label {
+  color: #4c4e63;
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+.profile-history-selector select {
+  width: 100%;
+  min-height: 42px;
+  padding: 9px 12px;
+  border: 1px solid #d9dbea;
+  border-radius: 9px;
+  background: #fff;
+  color: #282a3d;
+  font: inherit;
+}
+
+.profile-current-level {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin: 0 0 18px;
+  padding: 13px 15px;
+  border: 1px solid #e8e7f5;
+  border-radius: 10px;
+  background: #f8f7ff;
+}
+
+.profile-current-level > span {
+  color: #55576d;
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+.profile-current-level small {
+  margin-left: auto;
+  color: #77798d;
+  font-size: 0.8rem;
+}
+
+.profile-history-state,
+.profile-history-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 11px;
+  min-height: 100px;
+  padding: 18px;
+  border: 1px dashed #d9dbea;
+  border-radius: 12px;
+  color: #73758a;
+  text-align: center;
+}
+
+.profile-history-empty {
+  flex-direction: column;
+  gap: 8px;
+}
+
+.profile-history-empty svg {
+  color: #8a82c9;
+}
+
+.profile-history-empty strong {
+  color: #44465c;
+  font-size: 0.92rem;
+}
+
+.profile-history-empty span {
+  max-width: 560px;
+  font-size: 0.83rem;
+  line-height: 1.5;
+}
+
+.profile-history-error {
+  margin: 0 0 14px;
+  padding: 11px 13px;
+  border-radius: 8px;
+  background: #fff4f2;
+  color: #a53c35;
+  font-size: 0.85rem;
+}
+
+.profile-history-chart {
+  margin: 18px 0 22px;
+  padding: 16px 12px 8px;
+  border: 1px solid #ececf3;
+  border-radius: 12px;
+  background: #fdfdff;
+}
+
+.profile-history-chart-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 0 8px 8px;
+}
+
+.profile-history-chart-heading h4,
+.profile-history-table-wrapper h4 {
+  margin: 0;
+  color: #34364b;
+  font-size: 0.94rem;
+}
+
+.profile-history-chart-heading span {
+  color: #818397;
+  font-size: 0.76rem;
+}
+
+.profile-history-table-wrapper {
+  margin-top: 18px;
+}
+
+.profile-history-table-wrapper h4 {
+  margin-bottom: 11px;
+}
+
+.profile-history-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+}
+
+.profile-history-table th,
+.profile-history-table td {
+  padding: 11px 10px;
+  border-bottom: 1px solid #ececf2;
+  text-align: left;
+  vertical-align: middle;
+}
+
+.profile-history-table th {
+  background: #f7f7fb;
+  color: #696b80;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.035em;
+  white-space: nowrap;
+}
+
+.profile-history-table td {
+  color: #4e5064;
+  line-height: 1.45;
+}
+
+.profile-history-table tr:last-child td {
+  border-bottom: 0;
+}
+
+.profile-history-arrow {
+  padding: 0 5px;
+  color: #85869a;
+  font-weight: 700;
+}
+
+.profile-history-note {
+  margin-top: 17px;
+  padding: 11px 13px;
+  border-left: 3px solid #9a91df;
+  border-radius: 5px;
+  background: #f7f6ff;
+  color: #66677c;
+  font-size: 0.78rem;
+  line-height: 1.5;
+}
+
+@media (max-width: 640px) {
+  .profile-history-section {
+    padding: 16px 12px;
+  }
+
+  .profile-history-selector {
+    grid-template-columns: 1fr;
+    gap: 7px;
+  }
+
+  .profile-current-level small {
+    width: 100%;
+    margin-left: 0;
+  }
+
+  .profile-history-table {
+    min-width: 650px;
+  }
+}
